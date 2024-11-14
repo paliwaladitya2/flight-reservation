@@ -1,8 +1,20 @@
-from .models import Booking
-
 class Command:
     def execute(self):
         raise NotImplementedError("Subclasses must implement this method.")
+
+
+class CommandInvoker:
+    def __init__(self):
+        self.commands = []
+
+    def add_command(self, command):
+        self.commands.append(command)
+
+    def execute_all(self):
+        results = []
+        for command in self.commands:
+            results.append(command.execute())
+        return results
 
 
 class BookFlight(Command):
@@ -11,14 +23,5 @@ class BookFlight(Command):
         self.user = user
 
     def execute(self):
-        booking = Booking.objects.create(flight=self.flight, user=self.user)
-        return booking
-
-
-class CancelFlight(Command):
-    def __init__(self, booking):
-        self.booking = booking
-
-    def execute(self):
-        self.booking.delete()
-        return "Booking canceled successfully"
+        from .repositories import BookingRepository
+        return BookingRepository.create_booking(self.flight, self.user)
