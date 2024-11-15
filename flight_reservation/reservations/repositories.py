@@ -38,3 +38,7 @@ class BookingRepository:
     @staticmethod
     def create_booking(flight, user):
         return Booking.objects.create(flight=flight, user=user)
+    
+    @staticmethod
+    def get_booking_by_id(id):
+        return Booking.objects.get(id=id)

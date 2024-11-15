@@ -25,3 +25,12 @@ class BookFlight(Command):
     def execute(self):
         from .repositories import BookingRepository
         return BookingRepository.create_booking(self.flight, self.user)
+    
+
+class CancelFlight(Command):
+    def __init__(self, booking):
+        self.booking = booking
+
+    def execute(self):
+        self.booking.delete()
+        return "Booking canceled successfully!"
