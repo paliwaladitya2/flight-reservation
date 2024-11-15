@@ -16,19 +16,15 @@ def register_user(request):
         password = request.POST.get("password")
         phone_number = request.POST.get("phone_number")
 
-        # Validate username
         if not username:
             return JsonResponse({"message": "Username is required!"}, status=400)
 
-        # Validate password
         if not password:
             return JsonResponse({"message": "Password is required!"}, status=400)
 
-        # Validate uniqueness of username
         if CustomUser.objects.filter(username=username).exists():
             return JsonResponse({"message": "Username already exists!"}, status=400)
 
-        # Create the user
         user = CustomUser.objects.create_user(
             username=username, password=password, phone_number=phone_number
         )
@@ -62,7 +58,7 @@ def book_flight(request):
 
         results = invoker.execute_all()
 
-        booking = results[0]  # Assuming the first command is for booking
+        booking = results[0]
         booking_data = {
             "id": booking.id,
             "flight_number": booking.flight.flight_number,
@@ -99,14 +95,12 @@ def add_flight(request):
         flight_number = request.POST.get("flight_number")
         flight_type = request.POST.get("flight_type")
 
-        # Normal way: Create flight using explicit details
         if flight_number:
             departure = request.POST.get("departure")
             arrival = request.POST.get("arrival")
             seats = request.POST.get("seats")
             fare = request.POST.get("fare")
 
-            # Ensure all required fields are provided
             if not all([departure, arrival, seats, fare]):
                 return JsonResponse({"error": "All fields are required for custom flight creation."}, status=400)
 
@@ -119,7 +113,6 @@ def add_flight(request):
             )
             return JsonResponse({"message": f"Flight {flight.flight_number} added successfully!"})
 
-        # Factory-based way: Create flight dynamically
         elif flight_type:
             try:
                 flight = FlightFactory.create_flight(flight_type)
@@ -127,7 +120,6 @@ def add_flight(request):
             except ValueError as e:
                 return JsonResponse({"error": str(e)}, status=400)
 
-        # Neither flight_number nor flight_type provided
         return JsonResponse({"error": "Either flight_number or flight_type must be provided."}, status=400)
 
 @staff_member_required
@@ -158,7 +150,6 @@ def cancel_booking(request):
         booking_id = request.POST.get("booking_id")
         booking = get_object_or_404(Booking, id=booking_id)
 
-        # Create and execute the CancelFlight command
         from .commands import CancelFlight
         cancel_command = CancelFlight(booking=booking)
         result = cancel_command.execute()
