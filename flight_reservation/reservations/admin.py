@@ -14,4 +14,6 @@ class FlightAdmin(admin.ModelAdmin):
 
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
-    list_display = ("user", "flight", "booked_at")
+    list_display = ("user", "flight", "booked_at", "state")
+    list_filter = ('state',)
+    search_fields = ('user__username', 'flight__flight_number')
