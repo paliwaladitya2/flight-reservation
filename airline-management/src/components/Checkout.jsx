@@ -1,32 +1,45 @@
-import React, { Component } from "react";
-import { withRouter } from "./withRouter"; // Ensure this is imported correctly
+import React, { useState, useEffect } from "react";
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import { useNavigate, useLocation } from "react-router-dom";
+import "./Checkout.css";
 
-class Checkout extends Component {
-  constructor(props) {
-    super(props);
+const Checkout = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-    // Safely access location.state
-    const state = props.location?.state;
+  // Extract passenger and flight details from location state
+  const { passenger, flightId, flightPrice, flightDetails } = location.state || {
+    passenger: { name: "", age: "", passport: "" },
+    flightId: "Unknown Flight",
+    flightPrice: "0.00",
+    flightDetails: { from: "N/A", to: "N/A", time: "N/A" },
+  };
 
-    this.state = {
-      passenger: state?.passenger || { name: "", age: "", passport: "" },
-      flightId: state?.flightId || "Unknown Flight",
-    };
-  }
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
-  render() {
-    const { passenger, flightId } = this.state;
-
-    // If passenger details are missing, show an error message
-    if (!passenger.name) {
-      return (
-        <div className="checkout-container">
-          <p>No passenger details found. Please go back and fill the form.</p>
-        </div>
-      );
+  // If passenger or flight details are missing, show an error message
+  useEffect(() => {
+    if (!passenger?.name || !flightId) {
+      alert("Missing passenger or flight details. Please go back and fill the form.");
+      navigate("/passenger-details"); // Redirect back to the passenger form
     }
+  }, [passenger, flightId, navigate]);
 
-    return (
+  const handlePaymentSuccess = (details) => {
+    // Perform backend operations like saving payment details
+    console.log("Payment Details:", details);
+    alert(`Payment successful! Transaction ID: ${details.id}`);
+    setPaymentSuccess(true);
+    navigate("/my-bookings"); // Redirect to bookings page
+  };
+
+  return (
+    <PayPalScriptProvider
+      options={{
+        "client-id": "Abrw0xkAkLNHz9GVo5GeuAY2jjsfU4yqgU4TqT_LKQbNPgaC-xDZ2iIFy-8GjwQnDJWLtBfTfaUiIHXY", // Replace with your PayPal Client ID
+        currency: "EUR",
+      }}
+    >
       <div className="checkout-container">
         <h2>Checkout</h2>
         <div className="checkout-details">
@@ -35,12 +48,40 @@ class Checkout extends Component {
           <p><strong>Age:</strong> {passenger.age}</p>
           <p><strong>Passport Number:</strong> {passenger.passport}</p>
           <h3>Flight Details</h3>
-          <p><strong>Flight ID:</strong> {flightId}</p>
+          <p><strong>From:</strong> {flightDetails.from}</p>
+          <p><strong>To:</strong> {flightDetails.to}</p>
+          <p><strong>Time:</strong> {flightDetails.time}</p>
+          <p><strong>Price:</strong> ${flightPrice}</p>
         </div>
-        <button className="checkout-button">Confirm Booking</button>
-      </div>
-    );
-  }
-}
 
-export default withRouter(Checkout);
+        <h3>Pay with PayPal</h3>
+        <PayPalButtons
+          style={{ layout: "vertical" }}
+          createOrder={(data, actions) => {
+            return actions.order.create({
+              purchase_units: [
+                {
+                  amount: {
+                    value: flightPrice, // Use dynamic flight price
+                  },
+                },
+              ],
+            });
+          }}
+          onApprove={async (data, actions) => {
+            const details = await actions.order.capture();
+            handlePaymentSuccess(details); // Handle successful payment
+          }}
+          onError={(err) => {
+            console.error("PayPal Payment Error:", err);
+            alert("Payment failed. Please try again.");
+          }}
+        />
+
+        {paymentSuccess && <p className="success-message">Payment completed successfully!</p>}
+      </div>
+    </PayPalScriptProvider>
+  );
+};
+
+export default Checkout;

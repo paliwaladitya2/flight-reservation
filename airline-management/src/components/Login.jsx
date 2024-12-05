@@ -1,89 +1,82 @@
-import React, { Component } from "react";
-import { Link, Navigate } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { loginUser } from "../api";
 import "./Login.css";
 
-class Login extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      username: "",
-      password: "",
-      errorMessage: "",
-      redirect: false, // Add redirect state
-    };
-  }
+const Login = ({ onLogin }) => {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const navigate = useNavigate();
 
-  handleInputChange = (event) => {
-    const { name, value } = event.target;
-    this.setState({ [name]: value, errorMessage: "" });
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "username") setUsername(value);
+    if (name === "password") setPassword(value);
+    setErrorMessage(""); // Clear error message on input change
   };
 
-  handleSubmit = (event) => {
-    event.preventDefault();
-    const { username, password } = this.state;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-    // Call the login handler passed via props
-    const loginSuccess = this.props.onLogin(username, password);
+    try {
+      // Call the backend API for login
+      const response = await loginUser({ username, password });
+      const token = response.data.token;
 
-    if (loginSuccess) {
-      this.setState({ redirect: true }); // Set redirect to true on success
-    } else {
-      this.setState({ errorMessage: "Invalid username or password." });
+      // Trigger login action and navigate to homepage
+      onLogin(token);
+      navigate("/homepage");
+    } catch (error) {
+      setErrorMessage(
+        error.response?.data?.message || "Invalid username or password."
+      );
     }
   };
 
-  render() {
-    const { username, password, errorMessage, redirect } = this.state;
-
-    // Redirect if login is successful
-    if (redirect) {
-      return <Navigate to="/homepage" />;
-    }
-
-    return (
-      <div className="login-container">
-        <div className="login-box">
-          <h2 className="login-title">Welcome Back</h2>
-          {errorMessage && <p className="error-message">{errorMessage}</p>}
-          <form onSubmit={this.handleSubmit}>
-            <div className="input-group">
-              <label>Username</label>
-              <input
-                type="text"
-                name="username"
-                value={username}
-                onChange={this.handleInputChange}
-                placeholder="Enter your username"
-                required
-              />
-            </div>
-            <div className="input-group">
-              <label>Password</label>
-              <input
-                type="password"
-                name="password"
-                value={password}
-                onChange={this.handleInputChange}
-                placeholder="Enter your password"
-                required
-              />
-            </div>
-            <button type="submit" className="login-button">
-              Login
-            </button>
-          </form>
-          <div className="register-link">
-  <p>
-    Don't have an account?{" "}
-    <Link to="/register" className="register-link-button">
-      Register
-    </Link>
-  </p>
-</div>
+  return (
+    <div className="login-container">
+      <div className="login-box">
+        <h2 className="login-title">Welcome Back</h2>
+        {errorMessage && <p className="error-message">{errorMessage}</p>}
+        <form onSubmit={handleSubmit}>
+          <div className="input-group">
+            <label>Username</label>
+            <input
+              type="text"
+              name="username"
+              value={username}
+              onChange={handleInputChange}
+              placeholder="Enter your username"
+              required
+            />
+          </div>
+          <div className="input-group">
+            <label>Password</label>
+            <input
+              type="password"
+              name="password"
+              value={password}
+              onChange={handleInputChange}
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+          <button type="submit" className="login-button">
+            Login
+          </button>
+        </form>
+        <div className="register-link">
+          <p>
+            Don't have an account?{" "}
+            <Link to="/register" className="register-link-button">
+              Register
+            </Link>
+          </p>
         </div>
       </div>
-    );
-  }
-}
+    </div>
+  );
+};
 
 export default Login;
