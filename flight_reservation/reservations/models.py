@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+
 class CustomUser(AbstractUser):
     phone_number = models.CharField(max_length=15, blank=True, null=True)
 
@@ -40,24 +41,32 @@ class Booking(models.Model):
         self.save()
         
     def handle(self):
+        # Dynamically get the state handler class
         state_class = globals().get(f"{self.state}State")
         if state_class:
             return state_class().handle(self)
-        return "Invalid state."
+        return f"Invalid state: {self.state}"
 
 
 class BookingState:
+    """Base class for booking states."""
     def handle(self, booking):
         raise NotImplementedError("Subclasses must implement this method.")
     
-class Pending(BookingState):
+
+class PendingState(BookingState):
+    """Handler for Pending state."""
     def handle(self, booking):
-        raise "Bookinig is pending."
-    
-class Confirmed(BookingState):
+        return "Booking is pending."
+
+
+class ConfirmedState(BookingState):
+    """Handler for Confirmed state."""
     def handle(self, booking):
-        raise "Booking is confirmed."
-    
-class Cancelled(BookingState):
+        return "Booking is confirmed."
+
+
+class CancelledState(BookingState):
+    """Handler for Cancelled state."""
     def handle(self, booking):
-        raise "Booking is cancelled."
+        return "Booking is cancelled."
