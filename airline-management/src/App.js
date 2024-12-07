@@ -1,107 +1,59 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./components/Login";
+import Register from "./components/RegistrationForm";
 import AirlineReservation from "./components/AirlineReservation";
-import RegistrationForm from "./components/RegistrationForm";
-import PassengerDetails from "./components/PassengerDetails";
-import Checkout from "./components/Checkout";
 import MyBookings from "./components/MyBookings";
-import { getAuthToken, saveAuthToken, removeAuthToken } from "./auth";
-import { fetchBookings } from "./api";
+import Navbar from "./components/Navbar";
+import "./App.css";
 
 const App = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(!!getAuthToken());
-  const [selectedFlight, setSelectedFlight] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [sessionId, setSessionId] = useState(null);
 
   useEffect(() => {
-    if (isLoggedIn) {
-      // Optionally preload user data, bookings, or other details here
-      fetchBookings(getAuthToken()).catch((error) => {
-        console.error("Error fetching bookings:", error);
-        handleLogout();
-      });
+    const sessionID = sessionStorage.getItem("sessionid"); // Match key used
+    if (sessionID) {
+      setIsAuthenticated(true);
+      setSessionId(sessionID);
+    } else {
+      console.error("Session ID not found. User may not be logged in.");
     }
-  }, [isLoggedIn]);
+  }, []);  
+  
 
-  const handleLogin = (token) => {
-    saveAuthToken(token);
-    setIsLoggedIn(true);
+  const handleLogin = (sessionKey) => {
+    setIsAuthenticated(true);
+    setSessionId(sessionKey);
+    sessionStorage.setItem('sessionID', sessionKey);  // Store session ID in sessionStorage
   };
 
   const handleLogout = () => {
-    removeAuthToken();
-    setIsLoggedIn(false);
-  };
-
-  const handleBookNow = (flight, navigate) => {
-    setSelectedFlight(flight);
-    navigate("/passenger-details");
+    setIsAuthenticated(false);
+    sessionStorage.removeItem('sessionID');  // Clear session ID from sessionStorage
+    setSessionId(null);
   };
 
   return (
     <Router>
-      <Routes>
-        {/* Redirect root path to login or homepage */}
-        <Route
-          path="/"
-          element={<Navigate to={isLoggedIn ? "/homepage" : "/login"} />}
-        />
-
-        {/* Login Page */}
-        <Route
-          path="/login"
-          element={<Login onLogin={handleLogin} />}
-        />
-
-        {/* Registration Page */}
-        <Route
-          path="/register"
-          element={<RegistrationForm />}
-        />
-
-        {/* Airline Reservation (Homepage) */}
-        {isLoggedIn && (
-          <Route
-            path="/homepage"
-            element={
-              <AirlineReservation
-                onLogout={handleLogout}
-                onBookNow={(flight, navigate) => handleBookNow(flight, navigate)}
-              />
-            }
-          />
-        )}
-
-        {/* Passenger Details */}
-        {isLoggedIn && (
-          <Route
-            path="/passenger-details"
-            element={<PassengerDetails flight={selectedFlight} />}
-          />
-        )}
-
-        {/* My Bookings */}
-        {isLoggedIn && (
-          <Route
-            path="/my-bookings"
-            element={<MyBookings />}
-          />
-        )}
-
-        {/* Checkout Page */}
-        {isLoggedIn && (
-          <Route
-            path="/checkout"
-            element={<Checkout />}
-          />
-        )}
-
-        {/* Catch-all Route */}
-        <Route
-          path="*"
-          element={<Navigate to={isLoggedIn ? "/homepage" : "/login"} />}
-        />
-      </Routes>
+      <div className="app">
+        {isAuthenticated && <Navbar onLogout={handleLogout} />}
+        <Routes>
+          {!isAuthenticated ? (
+            <>
+              <Route path="/login" element={<Login onLogin={handleLogin} />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </>
+          ) : (
+            <>
+              <Route path="/flights" element={<AirlineReservation />} />
+              <Route path="/bookings" element={<MyBookings />} />
+              <Route path="*" element={<Navigate to="/flights" replace />} />
+            </>
+          )}
+        </Routes>
+      </div>
     </Router>
   );
 };

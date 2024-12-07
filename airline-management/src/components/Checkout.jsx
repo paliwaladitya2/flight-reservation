@@ -30,7 +30,7 @@ const Checkout = () => {
     console.log("Payment Details:", details);
     alert(`Payment successful! Transaction ID: ${details.id}`);
     setPaymentSuccess(true);
-    navigate("/my-bookings"); // Redirect to bookings page
+    navigate("/bookings"); // Redirect to bookings page
   };
 
   return (

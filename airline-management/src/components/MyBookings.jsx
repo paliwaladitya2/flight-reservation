@@ -1,62 +1,86 @@
-import React, { useState, useEffect } from "react";
-import { fetchBookings } from "../api"; // Import the API call
-import { getAuthToken } from "../auth"; // Import authentication utilities
-import "./MyBookings.css"; // Optional: Include CSS for styling
+import React, { useEffect, useState } from "react";
+import api from "../services/api";
+import "./MyBookings.css";
 
 const MyBookings = () => {
   const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const loadBookings = async () => {
+    const fetchBookings = async () => {
       try {
-        const token = getAuthToken(); // Get the user's token from storage
-        const response = await fetchBookings(token); // Fetch bookings from the backend
-        setBookings(response.data.my_bookings); // Set bookings in state
-      } catch (err) {
-        setError("Failed to fetch bookings. Please try again.");
-      } finally {
-        setLoading(false); // Stop the loading spinner
+        const response = await api.getMyBookings(); // Call updated API
+        if (response.error) {
+          setMessage(response.error);
+        } else if (response.bookings.length === 0) {
+          setMessage("You have no bookings.");
+        } else {
+          setBookings(response.bookings);
+          setMessage("");
+        }
+      } catch (error) {
+        setMessage("Error fetching bookings.");
       }
     };
+    fetchBookings();
+  }, []);  
 
-    loadBookings();
-  }, []);
-
-  if (loading) {
-    return <p>Loading your bookings...</p>; // Loading state
-  }
-
-  if (error) {
-    return <p className="error-message">{error}</p>; // Error state
-  }
+  const handleCancelBooking = async (bookingId) => {
+    try {
+      const response = await api.cancelBooking({ booking_id: bookingId }); // Pass as object
+      if (response.error) {
+        alert(`Error: ${response.error}`);
+      } else {
+        alert("Booking cancelled successfully!");
+        // Refresh bookings list
+        const updatedBookings = await api.getMyBookings();
+        setBookings(updatedBookings.bookings);
+        if (updatedBookings.bookings.length === 0) {
+          setMessage("You have no bookings.");
+        }
+      }
+    } catch (error) {
+      alert("Error cancelling booking.");
+    }
+  };
 
   return (
-    <div className="my-bookings">
+    <div>
       <h2>My Bookings</h2>
-      {bookings.length > 0 ? (
-        <div className="booking-list">
-          {bookings.map((booking) => (
-            <div key={booking.id} className="booking-card">
-              <p>
-                <strong>From:</strong> {booking.flight_number} - {booking.departure}
-              </p>
-              <p>
-                <strong>To:</strong> {booking.arrival}
-              </p>
-              <p>
-                <strong>Booked At:</strong> {new Date(booking.booked_at).toLocaleString()}
-              </p>
-              <p>
-                <strong>Price:</strong> ${booking.fare}
-              </p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p>You have no bookings yet.</p>
-      )}
+      {message && <p>{message}</p>}
+      {bookings.length > 0 && !message ? (
+        <table className="bookings-table">
+          <thead>
+            <tr>
+              <th>Flight Number</th>
+              <th>Departure</th>
+              <th>Arrival</th>
+              <th>Fare</th>
+              <th>Booked At</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {bookings.map((booking) => (
+              <tr key={booking.id}>
+                <td>{booking.flight_number}</td>
+                <td>{booking.departure}</td>
+                <td>{booking.arrival}</td>
+                <td>${booking.fare}</td>
+                <td>{new Date(booking.booked_at).toLocaleString()}</td>
+                <td>
+                  <button
+                    onClick={() => handleCancelBooking(booking.id)}
+                    className="cancel-booking-button"
+                  >
+                    Cancel
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
     </div>
   );
 };

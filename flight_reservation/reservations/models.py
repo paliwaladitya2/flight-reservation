@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.core.exceptions import ValidationError
 
 
 class CustomUser(AbstractUser):
@@ -19,10 +20,26 @@ class Flight(models.Model):
     def __str__(self):
         return f"{self.flight_number}: {self.departure} -> {self.arrival}"
 
+    def book_seat(self, count=1):
+        """
+        Decrease available seats when a booking is made.
+        """
+        if self.seats < count:
+            raise ValidationError("Not enough seats available.")
+        self.seats -= count
+        self.save()
+
+    def cancel_seat(self, count=1):
+        """
+        Increase available seats when a booking is canceled.
+        """
+        self.seats += count
+        self.save()
+
 
 class Booking(models.Model):
-    flight = models.ForeignKey(Flight, on_delete=models.CASCADE)
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    flight = models.ForeignKey(Flight, on_delete=models.CASCADE, related_name="bookings")
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="bookings")
     booked_at = models.DateTimeField(auto_now_add=True)
     STATE_CHOICES = [
         ("Pending", "Pending"),
@@ -32,41 +49,24 @@ class Booking(models.Model):
     state = models.CharField(max_length=50, choices=STATE_CHOICES, default="Pending")
 
     def __str__(self):
-        return f"Booking by {self.user.username} for {self.flight}"
-    
-    def set_state(self, state):
-        if state not in dict(self.STATE_CHOICES):
-            raise ValueError(f"Invalid state: {state}")
-        self.state = state
+        return f"Booking: {self.flight.flight_number} by {self.user.username}"
+
+    def confirm_booking(self):
+        """
+        Confirm a booking and reduce flight seats.
+        """
+        if self.state != "Pending":
+            raise ValidationError("Booking cannot be confirmed in its current state.")
+        self.flight.book_seat()
+        self.state = "Confirmed"
         self.save()
-        
-    def handle(self):
-        # Dynamically get the state handler class
-        state_class = globals().get(f"{self.state}State")
-        if state_class:
-            return state_class().handle(self)
-        return f"Invalid state: {self.state}"
 
-
-class BookingState:
-    """Base class for booking states."""
-    def handle(self, booking):
-        raise NotImplementedError("Subclasses must implement this method.")
-    
-
-class PendingState(BookingState):
-    """Handler for Pending state."""
-    def handle(self, booking):
-        return "Booking is pending."
-
-
-class ConfirmedState(BookingState):
-    """Handler for Confirmed state."""
-    def handle(self, booking):
-        return "Booking is confirmed."
-
-
-class CancelledState(BookingState):
-    """Handler for Cancelled state."""
-    def handle(self, booking):
-        return "Booking is cancelled."
+    def cancel_booking(self):
+        """
+        Cancel a booking and release flight seats.
+        """
+        if self.state != "Confirmed":
+            raise ValidationError("Only confirmed bookings can be canceled.")
+        self.flight.cancel_seat()
+        self.state = "Cancelled"
+        self.save()

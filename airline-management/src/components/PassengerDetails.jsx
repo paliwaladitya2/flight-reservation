@@ -41,7 +41,7 @@ const PassengerDetails = ({ flight }) => {
     try {
       // Call the backend API to book the flight
       await bookFlight({ flight_id: flight.id, passenger: formData }, token);
-      navigate("/my-bookings");
+      navigate("/bookings");
     } catch (error) {
       setErrorMessage(
         error.response?.data?.message || "Booking failed. Please try again."

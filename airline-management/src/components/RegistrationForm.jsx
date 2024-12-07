@@ -1,86 +1,66 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { registerUser } from "../api"; // Import API call
-import "./RegistrationForm.css"; // CSS for styling
+import { useNavigate } from "react-router-dom";
+import api from "../services/api";
+import "./RegistrationForm.css";
 
 const RegistrationForm = () => {
-  const [formData, setFormData] = useState({ username: "", password: "", phone_number: "" });
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+    phone_number: "",
+  });
 
-  const handleInputChange = (event) => {
-    const { name, value } = event.target;
+  const [message, setMessage] = useState("");
+  const navigate = useNavigate(); // React Router's hook for navigation
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    setErrorMessage(""); // Clear error on input change
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    try {
-      // Call the backend API for registration
-      const response = await registerUser(formData);
-      setSuccessMessage(response.data.message);
-      setFormData({ username: "", password: "", phone_number: "" }); // Clear the form
-      setTimeout(() => navigate("/login"), 2000); // Redirect to login after success
-    } catch (error) {
-      setErrorMessage(
-        error.response?.data?.message || "Registration failed. Please try again."
-      );
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const response = await api.register(formData);
+    if (response.error) {
+      setMessage(response.error);
+    } else {
+      setMessage("Registration successful! Redirecting to login...");
+      setTimeout(() => {
+        navigate("/login"); // Redirect to login page after 2 seconds
+      }, 2000);
     }
   };
 
   return (
-    <div className="registration-container">
-      <div className="registration-box">
-        <h2>Register</h2>
-        {errorMessage && <p className="error-message">{errorMessage}</p>}
-        {successMessage && <p className="success-message">{successMessage}</p>}
-        <form onSubmit={handleSubmit}>
-          <div className="input-group">
-            <label>Username:</label>
-            <input
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleInputChange}
-              placeholder="Enter username"
-              required
-            />
-          </div>
-          <div className="input-group">
-            <label>Password:</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              placeholder="Enter password"
-              required
-            />
-          </div>
-          <div className="input-group">
-            <label>Phone Number:</label>
-            <input
-              type="text"
-              name="phone_number"
-              value={formData.phone_number}
-              onChange={handleInputChange}
-              placeholder="Enter phone number"
-              required
-            />
-          </div>
-          <button type="submit" className="register-button">
-            Register
-          </button>
-        </form>
-        <div className="login-link">
-          <Link to="/login">
-            <button className="back-to-login-button">Back to Login</button>
-          </Link>
-        </div>
-      </div>
+    <div className="registration-form">
+      <h2>Register</h2>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          name="username"
+          placeholder="Username"
+          value={formData.username}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          value={formData.password}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="text"
+          name="phone_number"
+          placeholder="Phone Number"
+          value={formData.phone_number}
+          onChange={handleChange}
+        />
+        <button type="submit">Register</button>
+      </form>
+      {message && <p>{message}</p>}
     </div>
   );
 };
