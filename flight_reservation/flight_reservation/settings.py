@@ -103,3 +103,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost",
     "http://127.0.0.1",
 ]
+
+# PayPal Configuration
+PAYPAL_CLIENT_ID = "Abrw0xkAkLNHz9GVo5GeuAY2jjsfU4yqgU4TqT_LKQbNPgaC-xDZ2iIFy-8GjwQnDJWLtBfTfaUiIHXY"  # Replace with your actual PayPal Client ID
+PAYPAL_CLIENT_SECRET = "ENlsdipTMsZpF-Pi2y6fqEc32c3X0y1Lpz1ZJ0zNYWmA-KmaLPbgG4FjOVvowWhQ_E_EX1LKqFmh0CL6"  # Replace with your actual PayPal Client Secret
+PAYPAL_ENVIRONMENT = "sandbox"  # Use "sandbox" for testing and "live" for production

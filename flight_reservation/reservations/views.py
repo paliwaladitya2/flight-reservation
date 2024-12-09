@@ -6,6 +6,13 @@ from .models import Flight, Booking, CustomUser
 from django.conf import settings
 import paypalrestsdk
 
+paypalrestsdk.configure({
+    "mode": settings.PAYPAL_ENVIRONMENT,  # "sandbox" or "live"
+    "client_id": settings.PAYPAL_CLIENT_ID,
+    "client_secret": settings.PAYPAL_CLIENT_SECRET,
+})
+
+
 # Public Pages
 def home_view(request):
     flights = Flight.objects.all()
@@ -223,4 +230,13 @@ def admin_dashboard(request):
         "bookings": bookings,
         "flights": flights,
         "users": users,
+    })
+
+@login_required
+def payment_cancel(request):
+    """
+    Handle payment cancellation.
+    """
+    return render(request, "payment_cancel.html", {
+        "message": "Your payment has been canceled. Please try again if you wish to proceed."
     })

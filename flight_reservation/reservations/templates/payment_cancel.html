@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Canceled{% endblock %}
+
+{% block content %}
+<h1 class="text-center text-warning">Payment Canceled</h1>
+<p class="text-center">Your payment process was canceled. You can try again by visiting the bookings page.</p>
+<div class="text-center">
+    <a href="{% url 'my_bookings' %}" class="btn btn-secondary mt-3">Back to My Bookings</a>
+</div>
+{% endblock %}

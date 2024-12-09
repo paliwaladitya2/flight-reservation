@@ -16,6 +16,8 @@ urlpatterns = [
     path("book-flight/", views.book_flight, name="book_flight"),  # Book flight page
     path("cancel-booking/", views.cancel_booking, name="cancel_booking"), 
     path("make-payment/", views.make_payment, name="make_payment"),
+    path("payment-cancel/", views.payment_cancel, name="payment_cancel"),
+    path("payment-success/", views.payment_success, name="payment_success"),
 
     # App-specific URLs
     path("reservations/", include("reservations.urls")),  # Include app routes
