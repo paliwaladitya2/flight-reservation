@@ -1,10 +1,22 @@
 from django.contrib import admin
 from django.urls import path, include
-from reservations import views
+from reservations import views  # Import views for serving templates
 
 urlpatterns = [
-    path("admin/", admin.site.urls),  # Django admin site
-    path("api/flights/", views.get_flights, name="get_flights"),
-    path("api/my-bookings/", views.fetch_my_bookings, name="fetch_my_bookings"),  # API endpoint for React
-    path("api/v1/reservations/", include("reservations.urls")),  # Include app routes
+    # Admin site
+    path("admin/", admin.site.urls),
+
+    # Public Pages
+    path("", views.home_view, name="home"),  # Home page
+    path("login/", views.login_view, name="login"),  # Login page
+    path("logout/", views.logout_view, name="logout"),  # Logout functionality
+
+    # Bookings Pages
+    path("my-bookings/", views.my_bookings_view, name="my_bookings"),  # My Bookings page
+    path("book-flight/", views.book_flight, name="book_flight"),  # Book flight page
+    path("cancel-booking/", views.cancel_booking, name="cancel_booking"), 
+    path("make-payment/", views.make_payment, name="make_payment"),
+
+    # App-specific URLs
+    path("reservations/", include("reservations.urls")),  # Include app routes
 ]

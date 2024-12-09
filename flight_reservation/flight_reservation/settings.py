@@ -10,19 +10,17 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 # Installed Applications
 INSTALLED_APPS = [
-    "corsheaders",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "reservations",
+    "reservations",  # Your app
 ]
 
 # Middleware
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",  # Handles sessions
     "django.middleware.common.CommonMiddleware",
@@ -39,7 +37,7 @@ ROOT_URLCONF = "flight_reservation.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [BASE_DIR / "templates"],  # Template directory
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -79,37 +77,29 @@ USE_TZ = True
 
 # Static files
 STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]  # Directory for custom static files
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Media files (if required)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTH_USER_MODEL = "reservations.CustomUser"
-LOGIN_URL = "/api/v1/reservations/login/"
-# CORS Settings
-CORS_ALLOW_CREDENTIALS = True  # Allow credentials (cookies)
-CSRF_COOKIE_SECURE = False 
-CORS_ALLOW_ALL_ORIGINS = False  # Disable open origins
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React app's URL
-    "http://127.0.0.1:3000",
-]
+# User Authentication
+AUTH_USER_MODEL = "reservations.CustomUser"  # Custom user model
+LOGIN_URL = "/login/"  # Redirect URL for login
+LOGIN_REDIRECT_URL = "/my-bookings/"  # Redirect after successful login
+LOGOUT_REDIRECT_URL = "/login/"  # Redirect after logout
 
-# CSRF Settings
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-
-SESSION_COOKIE_SAMESITE = "None"
+# Session Settings
+SESSION_COOKIE_SAMESITE = "Lax"  # Adjusted for template-based frontend
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = False  # Set to True in production
 
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
+# CSRF Settings
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost",
+    "http://127.0.0.1",
 ]

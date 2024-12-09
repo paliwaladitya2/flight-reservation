@@ -2,18 +2,13 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # User management
-    path("register/", views.register_user, name="register"),
-    path("login/", views.login_user, name="login"),
-    path("logout/", views.logout_user, name="logout"),
+    # Flight Management
+    path("add-flight/", views.add_flight, name="add_flight"),  # Add new flight (admin only)
+    path("edit-flight/<int:flight_id>/", views.edit_flight, name="edit_flight"),  # Edit existing flight
 
-    # Flight management
-    #path("api/flights/", views.get_flights, name="get_flights"),
-    path("admin/add-flight/", views.add_flight, name="add_flight"),
-    path("admin/edit-flight/<int:flight_id>/", views.edit_flight, name="edit_flight"),
-
-    # Booking management
-    #path("my-bookings/", views.fetch_my_bookings, name="fetch_my_bookings"),
-    path("book-flight/", views.book_flight, name="book_flight"),
-    path("cancel-booking/", views.cancel_booking, name="cancel_booking"),
+    # User Management
+    path("register/", views.register_user, name="register"),  # User registration
+    path("checkout/<int:booking_id>/", views.checkout, name="checkout"),
+    path("payment-success/", views.payment_success, name="payment_success"),
+    path("payment-cancel/", views.payment_cancel, name="payment_cancel"),
 ]
