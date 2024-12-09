@@ -3,8 +3,8 @@ from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist
 from .models import CustomUser, Flight, Booking
 from .repositories import FlightRepository, BookingRepository
-from .commands import BookFlight, CancelFlight
-
+from .commands import BookFlight, CancelFlight, ConfirmFlight
+from .state import CancelledState, ConfirmedState,PendingState
 
 # ----------- MODEL TESTS -----------
 class CustomUserModelTest(TestCase):
@@ -111,17 +111,24 @@ class BookingRepositoryTest(TestCase):
 
 
 # ----------- COMMAND TESTS -----------
-class CommandsTest(TestCase):
+class CommandPatternTest(TestCase):
     def setUp(self):
         self.user = CustomUser.objects.create_user(username="testuser", password="password123")
-        self.flight = Flight.objects.create(flight_number="A123", departure="City A", arrival="City B", seats=100, fare=500.0)
-        self.booking = Booking.objects.create(flight=self.flight, user=self.user, state="Pending")
+        self.flight = FlightRepository.create_flight(
+            {"flight_number": "A123", "departure": "City A", "arrival": "City B", "seats": 100, "fare": 500}
+        )
 
     def test_book_flight_command(self):
         command = BookFlight(self.flight, self.user)
         booking = command.execute()
-        self.assertEqual(booking.flight, self.flight)
-        self.assertEqual(booking.user, self.user)
+        self.assertEqual(booking.state, "Pending")
+
+    def test_confirm_booking_command(self):
+        booking = BookingRepository.create_booking(self.flight, self.user)
+        booking.transition(PendingState())
+        command = ConfirmFlight(booking)
+        result = command.execute()
+        self.assertEqual(booking.state, "Confirmed")
 
     def test_cancel_flight_command(self):
         command = CancelFlight(self.booking)
@@ -129,3 +136,19 @@ class CommandsTest(TestCase):
         self.booking.refresh_from_db()
         self.assertEqual(self.booking.state, "Cancelled")
         self.assertIn("Booking for flight", message)
+# --------------STATE PATTERN TESTS--------------------
+class StatePatternTest(TestCase):
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(username="testuser", password="password123")
+        self.flight = FlightRepository.create_flight(
+            {"flight_number": "A123", "departure": "City A", "arrival": "City B", "seats": 100, "fare": 500}
+        )
+        self.booking = BookingRepository.create_booking(self.flight, self.user)
+
+    def test_booking_transitions(self):
+        self.booking.transition(PendingState())
+        self.assertEqual(self.booking.state, "Pending")
+        self.booking.transition(ConfirmedState())
+        self.assertEqual(self.booking.state, "Confirmed")
+        self.booking.transition(CancelledState())
+        self.assertEqual(self.booking.state, "Cancelled")
