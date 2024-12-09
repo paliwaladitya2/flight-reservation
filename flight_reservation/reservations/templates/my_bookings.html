@@ -23,14 +23,14 @@
                 <td>{{ booking.flight.departure }}</td>
                 <td>{{ booking.flight.arrival }}</td>
                 <td>
-                    <span class="{% if booking.state == 'Pending' %}text-warning{% elif booking.state == 'Confirmed' %}text-success{% else %}text-danger{% endif %}">
+                    <span class="{% if booking.state == 'PendingState' %}text-warning{% elif booking.state == 'ConfirmedState' %}text-success{% else %}text-danger{% endif %}">
                         {{ booking.state }}
                     </span>
                 </td>
                 <td>
-                    {% if booking.state == "Pending" %}
+                    {% if booking.state == "PendingState" %}
                     <a href="{% url 'checkout' booking.id %}" class="btn btn-primary btn-sm">Make Payment</a>
-                    {% elif booking.state == "Confirmed" %}
+                    {% elif booking.state == "ConfirmedState" %}
                     <form method="post" action="{% url 'cancel_booking' %}">
                         {% csrf_token %}
                         <input type="hidden" name="booking_id" value="{{ booking.id }}">

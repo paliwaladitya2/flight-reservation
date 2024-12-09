@@ -45,54 +45,34 @@ class Flight(models.Model):
 
 
 class Booking(models.Model):
-    flight = models.ForeignKey("Flight", on_delete=models.CASCADE, related_name="bookings")
-    user = models.ForeignKey("CustomUser", on_delete=models.CASCADE, related_name="bookings")
+    flight = models.ForeignKey('Flight', on_delete=models.CASCADE, related_name='bookings')
+    user = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='bookings')
     booked_at = models.DateTimeField(auto_now_add=True)
     STATE_CHOICES = [
-        ("PendingState", "Pending"),
-        ("ConfirmedState", "Confirmed"),
-        ("CancelledState", "Cancelled"),
+        ('PendingState', 'Pending'),
+        ('ConfirmedState', 'Confirmed'),
+        ('CancelledState', 'Cancelled'),
     ]
-    state = models.CharField(max_length=50, choices=STATE_CHOICES, default="PendingState")
-
-    def init(self, args, **kwargs):
-        super().init(args, **kwargs)
-        # Initialize the state instance based on the state field
-        self.state_instance = self.get_state_instance()
-
-    def get_state_instance(self):
-        """
-        Return the state instance corresponding to the current state.
-        """
-        state_classes = {
-            "PendingState": PendingState(),
-            "ConfirmedState": ConfirmedState(),
-            "CancelledState": CancelledState(),
-        }
-        return state_classes.get(self.state, PendingState())
-
-    def handle(self):
-        """
-        Delegate the handle logic to the state instance.
-        """
-        return self.state_instance.handle(self)
+    state = models.CharField(max_length=20, choices=STATE_CHOICES, default='PendingState')
 
     def transition(self, new_state):
-        """
-        Delegate the transition logic to the state instance.
-        """
-        self.state_instance.transition(self, new_state)
+        if new_state in [choice[0] for choice in self.STATE_CHOICES]:
+            self.state = new_state
+            self.save()
+            return True
+        return False
 
     def confirm_booking(self):
-        """
-        Confirm a booking and add loyalty points.
-        """
-        self.user.update_loyalty_points(10)  # Add 10 loyalty points
-        self.transition(ConfirmedState())
+        if self.state == 'PendingState':
+            self.transition('ConfirmedState')
+            self.user.update_loyalty_points(10)  # Ensure loyalty points are updated correctly
+            self.save()
 
     def cancel_booking(self):
-        """
-        Cancel a booking and deduct loyalty points.
-        """
-        self.user.update_loyalty_points(-10)  # Deduct 10 loyalty points
-        self.transition(CancelledState())
+        if self.state == 'ConfirmedState':
+            self.transition('CancelledState')
+            self.user.update_loyalty_points(-10)  # Ensure loyalty points are updated correctly
+            self.save()
+
+    def __str__(self):
+        return f'{self.user.username} booking for {self.flight.flight_number} - {self.state}'
