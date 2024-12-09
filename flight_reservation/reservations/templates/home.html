@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<h1 class="text-center mb-4">Available Flights</h1>
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for flight in flights %}
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">{{ flight.flight_number }}</h5>
+                <p class="card-text">
+                    <strong>From:</strong> {{ flight.departure }}<br>
+                    <strong>To:</strong> {{ flight.arrival }}<br>
+                    <strong>Seats:</strong> {{ flight.seats }}<br>
+                    <strong>Fare:</strong> ${{ flight.fare }}
+                </p>
+                {% if user.is_authenticated %}
+                <form method="post" action="{% url 'book_flight' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="flight_id" value="{{ flight.id }}">
+                    <button type="submit" class="btn btn-success w-100">Book Now</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

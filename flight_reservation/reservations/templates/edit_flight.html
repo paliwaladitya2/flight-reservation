@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Edit Flight{% endblock %}
+{% block content %}
+<h1>Edit Flight</h1>
+<form method="post">
+    {% csrf_token %}
+    <input type="text" name="flight_number" value="{{ flight.flight_number }}" required>
+    <input type="text" name="departure" value="{{ flight.departure }}" required>
+    <input type="text" name="arrival" value="{{ flight.arrival }}" required>
+    <input type="number" name="seats" value="{{ flight.seats }}" required>
+    <input type="number" name="fare" value="{{ flight.fare }}" step="0.01" required>
+    <button type="submit" class="btn btn-primary">Update</button>
+</form>
+{% endblock %}
