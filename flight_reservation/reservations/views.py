@@ -12,20 +12,30 @@ def home_view(request):
     return render(request, "home.html", {"flights": flights})
 
 
-def register_user(request):
+def register(request):
+    """
+    View to handle user registration.
+    """
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
-        phone_number = request.POST.get("phone_number")
+        confirm_password = request.POST.get("confirm_password")
+        email = request.POST.get("email")
 
-        if not username or not password:
-            return render(request, "register.html", {"error": "Username and password are required!"})
+        # Validation
+        if not username or not password or not email:
+            return render(request, "register.html", {"error": "All fields are required."})
+
+        if password != confirm_password:
+            return render(request, "register.html", {"error": "Passwords do not match."})
 
         if CustomUser.objects.filter(username=username).exists():
-            return render(request, "register.html", {"error": "Username already exists!"})
+            return render(request, "register.html", {"error": "Username already exists."})
 
-        CustomUser.objects.create_user(username=username, password=password, phone_number=phone_number)
+        # Create the user
+        CustomUser.objects.create_user(username=username, password=password, email=email)
         return redirect("login")
+
     return render(request, "register.html")
 
 def login_view(request):
@@ -198,3 +208,19 @@ def payment_success(request):
         return render(request, "payment_success.html", {"booking": booking})
     else:
         return render(request, "error.html", {"error": payment.error})
+    
+from django.contrib.admin.views.decorators import staff_member_required
+
+@staff_member_required
+def admin_dashboard(request):
+    """
+    View to display the admin dashboard.
+    """
+    bookings = Booking.objects.all()
+    flights = Flight.objects.all()
+    users = CustomUser.objects.all()
+    return render(request, "admin_dashboard.html", {
+        "bookings": bookings,
+        "flights": flights,
+        "users": users,
+    })

@@ -7,8 +7,7 @@ urlpatterns = [
     path("edit-flight/<int:flight_id>/", views.edit_flight, name="edit_flight"),  # Edit existing flight
 
     # User Management
-    path("register/", views.register_user, name="register"),  # User registration
+    path("register/", views.register, name="register"),  # User registration
     path("checkout/<int:booking_id>/", views.checkout, name="checkout"),
-    path("payment-success/", views.payment_success, name="payment_success"),
-    path("payment-cancel/", views.payment_cancel, name="payment_cancel"),
+    path("payment-success/", views.payment_success, name="payment_success")
 ]

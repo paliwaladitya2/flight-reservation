@@ -1,24 +1,26 @@
 {% extends "base.html" %}
+
 {% block title %}Login{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
-    <div class="card p-4 shadow" style="width: 25rem;">
-        <h2 class="text-center mb-4">Login</h2>
-        <form method="post" action="{% url 'login' %}">
-            {% csrf_token %}
-            <div class="mb-3">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" name="username" class="form-control" id="username" required>
-            </div>
-            <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" name="password" class="form-control" id="password" required>
-            </div>
-            {% if error %}
-            <div class="alert alert-danger">{{ error }}</div>
-            {% endif %}
-            <button type="submit" class="btn btn-primary w-100">Login</button>
-        </form>
+<h1 class="text-center">Login</h1>
+<form method="post" action="{% url 'login' %}" class="card p-4 shadow mx-auto" style="max-width: 400px;">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="username" class="form-label">Username</label>
+        <input type="text" name="username" class="form-control" id="username" required>
     </div>
+    <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" name="password" class="form-control" id="password" required>
+    </div>
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    <button type="submit" class="btn btn-primary w-100">Login</button>
+</form>
+
+<div class="text-center mt-3">
+    <p>Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
 </div>
 {% endblock %}
