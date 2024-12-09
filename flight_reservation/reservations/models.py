@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.exceptions import ValidationError
-
+from .state import PendingState, ConfirmedState, CancelledState
 
 class CustomUser(AbstractUser):
     phone_number = models.CharField(max_length=15, blank=True, null=True)
@@ -38,35 +38,40 @@ class Flight(models.Model):
 
 
 class Booking(models.Model):
-    flight = models.ForeignKey(Flight, on_delete=models.CASCADE, related_name="bookings")
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="bookings")
+    flight = models.ForeignKey("Flight", on_delete=models.CASCADE, related_name="bookings")
+    user = models.ForeignKey("CustomUser", on_delete=models.CASCADE, related_name="bookings")
     booked_at = models.DateTimeField(auto_now_add=True)
     STATE_CHOICES = [
-        ("Pending", "Pending"),
-        ("Confirmed", "Confirmed"),
-        ("Cancelled", "Cancelled"),
+        ("PendingState", "Pending"),
+        ("ConfirmedState", "Confirmed"),
+        ("CancelledState", "Cancelled"),
     ]
-    state = models.CharField(max_length=50, choices=STATE_CHOICES, default="Pending")
+    state = models.CharField(max_length=50, choices=STATE_CHOICES, default="PendingState")
 
-    def __str__(self):
-        return f"Booking: {self.flight.flight_number} by {self.user.username}"
+    def init(self, args, **kwargs):
+        super().init(args, **kwargs)
+        # Initialize the state instance based on the state field
+        self.state_instance = self.get_state_instance()
 
-    def confirm_booking(self):
+    def get_state_instance(self):
         """
-        Confirm a booking and reduce flight seats.
+        Return the state instance corresponding to the current state.
         """
-        if self.state != "Pending":
-            raise ValidationError("Booking cannot be confirmed in its current state.")
-        self.flight.book_seat()
-        self.state = "Confirmed"
-        self.save()
+        state_classes = {
+            "PendingState": PendingState(),
+            "ConfirmedState": ConfirmedState(),
+            "CancelledState": CancelledState(),
+        }
+        return state_classes.get(self.state, PendingState())
 
-    def cancel_booking(self):
+    def handle(self):
         """
-        Cancel a booking and release flight seats.
+        Delegate the handle logic to the state instance.
         """
-        if self.state != "Confirmed":
-            raise ValidationError("Only confirmed bookings can be canceled.")
-        self.flight.cancel_seat()
-        self.state = "Cancelled"
-        self.save()
+        return self.state_instance.handle(self)
+
+    def transition(self, new_state):
+        """
+        Delegate the transition logic to the state instance.
+        """
+        self.state_instance.transition(self, new_state)

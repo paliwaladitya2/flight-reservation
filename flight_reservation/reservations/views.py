@@ -3,15 +3,16 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from .models import Flight, Booking, CustomUser
+from .state import PendingState, ConfirmedState, CancelledState
 from django.conf import settings
 import paypalrestsdk
 
+# Configure PayPal SDK globally
 paypalrestsdk.configure({
     "mode": settings.PAYPAL_ENVIRONMENT,  # "sandbox" or "live"
     "client_id": settings.PAYPAL_CLIENT_ID,
     "client_secret": settings.PAYPAL_CLIENT_SECRET,
 })
-
 
 # Public Pages
 def home_view(request):
@@ -44,6 +45,7 @@ def register(request):
         return redirect("login")
 
     return render(request, "register.html")
+
 
 def login_view(request):
     if request.method == "POST":
@@ -107,6 +109,7 @@ def my_bookings_view(request):
     user_bookings = Booking.objects.filter(user=request.user)
     return render(request, "my_bookings.html", {"bookings": user_bookings})
 
+
 @login_required
 def cancel_booking(request):
     """
@@ -115,9 +118,12 @@ def cancel_booking(request):
     if request.method == "POST":
         booking_id = request.POST.get("booking_id")
         booking = get_object_or_404(Booking, id=booking_id, user=request.user)
-        booking.cancel_booking()
-        return redirect("my_bookings")
-    return redirect("my_bookings")
+        try:
+            booking.transition(CancelledState())
+            return redirect("my_bookings")
+        except ValueError as e:
+            return render(request, "error.html", {"error": str(e)})
+
 
 @login_required
 def book_flight(request):
@@ -125,10 +131,12 @@ def book_flight(request):
         flight_id = request.POST.get("flight_id")
         flight = get_object_or_404(Flight, id=flight_id)
 
-        Booking.objects.create(flight=flight, user=request.user)
+        booking = Booking.objects.create(flight=flight, user=request.user)
+        booking.transition(PendingState())  # Set state to pending
         return redirect("my_bookings")
     flights = Flight.objects.all()
     return render(request, "book_flight.html", {"flights": flights})
+
 
 @login_required
 def make_payment(request):
@@ -138,13 +146,16 @@ def make_payment(request):
     if request.method == "POST":
         booking_id = request.POST.get("booking_id")
         booking = get_object_or_404(Booking, id=booking_id, user=request.user)
-        
-        # Simulate a payment process
-        if booking.state == "Pending":
-            booking.state = "Confirmed"
-            booking.save()
-            return redirect("my_bookings")
-    return redirect("my_bookings")
+
+        try:
+            if isinstance(booking.state_instance, PendingState):
+                booking.transition(ConfirmedState())  # Set state to confirmed after payment
+                return redirect("my_bookings")
+            else:
+                raise ValueError("Cannot make payment for this booking.")
+        except ValueError as e:
+            return render(request, "error.html", {"error": str(e)})
+
 
 @login_required
 def checkout(request, booking_id):
@@ -155,18 +166,9 @@ def checkout(request, booking_id):
 
     if request.method == "POST":
         # Simulate user entering payment details (handled by PayPal)
-        # Redirect to PayPal
-        paypalrestsdk.configure({
-            "mode": settings.PAYPAL_ENVIRONMENT,
-            "client_id": settings.PAYPAL_CLIENT_ID,
-            "client_secret": settings.PAYPAL_CLIENT_SECRET,
-        })
-
         payment = paypalrestsdk.Payment({
             "intent": "sale",
-            "payer": {
-                "payment_method": "paypal",
-            },
+            "payer": {"payment_method": "paypal"},
             "redirect_urls": {
                 "return_url": request.build_absolute_uri("/payment-success/"),
                 "cancel_url": request.build_absolute_uri("/payment-cancel/"),
@@ -181,10 +183,7 @@ def checkout(request, booking_id):
                         "quantity": 1,
                     }]
                 },
-                "amount": {
-                    "total": f"{booking.flight.fare}",
-                    "currency": "USD",
-                },
+                "amount": {"total": f"{booking.flight.fare}", "currency": "USD"},
                 "description": f"Payment for booking {booking.id}.",
             }],
         })
@@ -198,6 +197,7 @@ def checkout(request, booking_id):
 
     return render(request, "checkout.html", {"booking": booking})
 
+
 @login_required
 def payment_success(request):
     """
@@ -210,13 +210,11 @@ def payment_success(request):
     if payment.execute({"payer_id": payer_id}):
         booking_id = payment.transactions[0].item_list.items[0].sku
         booking = get_object_or_404(Booking, id=booking_id, user=request.user)
-        booking.state = "Confirmed"
-        booking.save()
+        booking.transition(ConfirmedState())
         return render(request, "payment_success.html", {"booking": booking})
     else:
         return render(request, "error.html", {"error": payment.error})
-    
-from django.contrib.admin.views.decorators import staff_member_required
+
 
 @staff_member_required
 def admin_dashboard(request):
@@ -231,6 +229,7 @@ def admin_dashboard(request):
         "flights": flights,
         "users": users,
     })
+
 
 @login_required
 def payment_cancel(request):
