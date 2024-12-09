@@ -37,7 +37,7 @@ class ConfirmFlight(Command):
         self.booking = booking
 
     def execute(self):
-        self.booking.transition(ConfirmedState())
+        self.booking.confirm_booking()
         return f"Booking {self.booking.id} confirmed."
 
 
@@ -46,5 +46,5 @@ class CancelFlight(Command):
         self.booking = booking
 
     def execute(self):
-        self.booking.transition(CancelledState())
+        self.booking.cancel_booking()
         return f"Booking {self.booking.id} cancelled."

@@ -5,9 +5,16 @@ from .state import PendingState, ConfirmedState, CancelledState
 
 class CustomUser(AbstractUser):
     phone_number = models.CharField(max_length=15, blank=True, null=True)
-
+    loyalty_points = models.IntegerField(default=0)
     def __str__(self):
         return self.username
+    
+    def update_loyalty_points(self, points):
+        """
+        Update loyalty points for the user.
+        """
+        self.loyalty_points += points
+        self.save()
 
 
 class Flight(models.Model):
@@ -75,3 +82,17 @@ class Booking(models.Model):
         Delegate the transition logic to the state instance.
         """
         self.state_instance.transition(self, new_state)
+
+    def confirm_booking(self):
+        """
+        Confirm a booking and add loyalty points.
+        """
+        self.user.update_loyalty_points(10)  # Add 10 loyalty points
+        self.transition(ConfirmedState())
+
+    def cancel_booking(self):
+        """
+        Cancel a booking and deduct loyalty points.
+        """
+        self.user.update_loyalty_points(-10)  # Deduct 10 loyalty points
+        self.transition(CancelledState())

@@ -107,7 +107,10 @@ def edit_flight(request, flight_id):
 @login_required
 def my_bookings_view(request):
     user_bookings = Booking.objects.filter(user=request.user)
-    return render(request, "my_bookings.html", {"bookings": user_bookings})
+    return render(request, "my_bookings.html", {
+        "bookings": user_bookings,
+        "loyalty_points": request.user.loyalty_points,
+    })
 
 
 @login_required
@@ -159,13 +162,9 @@ def make_payment(request):
 
 @login_required
 def checkout(request, booking_id):
-    """
-    View to handle the checkout process.
-    """
     booking = get_object_or_404(Booking, id=booking_id, user=request.user)
 
     if request.method == "POST":
-        # Simulate user entering payment details (handled by PayPal)
         payment = paypalrestsdk.Payment({
             "intent": "sale",
             "payer": {"payment_method": "paypal"},
@@ -200,9 +199,6 @@ def checkout(request, booking_id):
 
 @login_required
 def payment_success(request):
-    """
-    Handle successful payment and update booking status.
-    """
     payment_id = request.GET.get("paymentId")
     payer_id = request.GET.get("PayerID")
 
@@ -210,7 +206,7 @@ def payment_success(request):
     if payment.execute({"payer_id": payer_id}):
         booking_id = payment.transactions[0].item_list.items[0].sku
         booking = get_object_or_404(Booking, id=booking_id, user=request.user)
-        booking.transition(ConfirmedState())
+        booking.confirm_booking()
         return render(request, "payment_success.html", {"booking": booking})
     else:
         return render(request, "error.html", {"error": payment.error})
