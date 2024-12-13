@@ -66,6 +66,15 @@ class Booking(models.Model):
         # Return the corresponding state instance or default to PendingState
         return state_classes.get(self.state, PendingState)()
 
+    @state_instance.setter
+    def state_instance(self, new_state_instance):
+        """ Allow setting the state_instance property. """
+        if not isinstance(new_state_instance, BookingState):
+            raise ValueError("Invalid state provided. Must be a subclass of BookingState.")
+        self.state = new_state_instance.__class__.__name__
+        self.save()
+
+
     def transition(self, new_state_instance):
         """
         Handle state transition for the booking.

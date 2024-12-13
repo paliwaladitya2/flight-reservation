@@ -18,8 +18,8 @@ class PendingState(BookingState):
 
     def transition(self, booking, newstate):
         if isinstance(newstate, ConfirmedState) or isinstance(newstate, CancelledState):
-            booking.stateinstance = newstate
-            booking.state = newstate._class.__name
+            booking.state_instance = newstate
+            booking.state = newstate.__class__.__name__  # Fix here
             booking.save()
         else:
             raise ValueError("Invalid state transition from Pending.")
@@ -35,7 +35,7 @@ class ConfirmedState(BookingState):
     def transition(self, booking, new_state):
         if isinstance(new_state, CancelledState):
             booking.state_instance = new_state
-            booking.state = new_state.__class.__name
+            booking.state = new_state.__class__.__name__  # Fix here
             booking.save()
         else:
             raise ValueError("Invalid state transition from Confirmed.")

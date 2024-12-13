@@ -25,7 +25,8 @@ class BookFlight(Command):
     def execute(self):
         from .repositories import BookingRepository
         booking = BookingRepository.create_booking(self.flight, self.user)
-        booking.state_instance.transition(booking, PendingState())
+        if not isinstance(booking.state_instance, PendingState):
+            booking.state_instance.transition(booking, PendingState())
         return booking
 
 class ConfirmFlight(Command):
