@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.exceptions import ValidationError
-from .state import PendingState, ConfirmedState, CancelledState
+from .state import PendingState, ConfirmedState, CancelledState,BookingState
 
 class CustomUser(AbstractUser):
     phone_number = models.CharField(max_length=15, blank=True, null=True)
@@ -45,34 +45,52 @@ class Flight(models.Model):
 
 
 class Booking(models.Model):
-    flight = models.ForeignKey('Flight', on_delete=models.CASCADE, related_name='bookings')
-    user = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='bookings')
+    flight = models.ForeignKey(Flight, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    state = models.CharField(max_length=50, default="PendingState")  # State as a string
     booked_at = models.DateTimeField(auto_now_add=True)
-    STATE_CHOICES = [
-        ('PendingState', 'Pending'),
-        ('ConfirmedState', 'Confirmed'),
-        ('CancelledState', 'Cancelled'),
-    ]
-    state = models.CharField(max_length=20, choices=STATE_CHOICES, default='PendingState')
-
-    def transition(self, new_state):
-        if new_state in [choice[0] for choice in self.STATE_CHOICES]:
-            self.state = new_state
-            self.save()
-            return True
-        return False
-
-    def confirm_booking(self):
-        if self.state == 'PendingState':
-            self.transition('ConfirmedState')
-            self.user.update_loyalty_points(10)  # Ensure loyalty points are updated correctly
-            self.save()
-
-    def cancel_booking(self):
-        if self.state == 'ConfirmedState':
-            self.transition('CancelledState')
-            self.user.update_loyalty_points(-10)  # Ensure loyalty points are updated correctly
-            self.save()
 
     def __str__(self):
-        return f'{self.user.username} booking for {self.flight.flight_number} - {self.state}'
+        return f"Booking #{self.id} for Flight {self.flight.flight_number} by {self.user.username}"
+
+    @property
+    def state_instance(self):
+        """
+        Dynamically instantiate the state class based on the `state` field.
+        """
+        state_classes = {
+            "PendingState": PendingState,
+            "ConfirmedState": ConfirmedState,
+            "CancelledState": CancelledState,
+        }
+        # Return the corresponding state instance or default to PendingState
+        return state_classes.get(self.state, PendingState)()
+
+    def transition(self, new_state_instance):
+        """
+        Handle state transition for the booking.
+        :param new_state_instance: Instance of the new state to transition to.
+        """
+        if not isinstance(new_state_instance, BookingState):
+            raise ValueError("Invalid state provided. Must be a subclass of BookingState.")
+        # Delegate the transition to the current state instance
+        self.state_instance.transition(self, new_state_instance)
+
+    def confirm_booking(self):
+        """
+        Confirm the booking if it's currently pending and update loyalty points.
+        """
+        if isinstance(self.state_instance, PendingState):
+            self.transition(ConfirmedState())  # Transition to ConfirmedState
+            self.user.update_loyalty_points(10)  # Add loyalty points
+            self.save()  # Save the state change to the database
+
+    def cancel_booking(self):
+        """
+        Cancel the booking if it's currently confirmed and update loyalty points.
+        """
+        if isinstance(self.state_instance, ConfirmedState):
+            self.transition(CancelledState())  # Transition to CancelledState
+            self.user.update_loyalty_points(-10)  # Subtract loyalty points
+            self.save()  # Save the state change to the database
+

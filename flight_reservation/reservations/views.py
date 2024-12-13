@@ -3,9 +3,9 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from .models import Flight, Booking, CustomUser
-from .state import PendingState, ConfirmedState, CancelledState
 from django.conf import settings
 import paypalrestsdk
+from .commands import CommandInvoker,CancelFlight,BookFlight,ConfirmFlight
 
 # Configure PayPal SDK globally
 paypalrestsdk.configure({
@@ -122,9 +122,12 @@ def cancel_booking(request):
         booking_id = request.POST.get("booking_id")
         booking = get_object_or_404(Booking, id=booking_id, user=request.user)
         try:
-            booking.transition(CancelledState())
+            invoker = CommandInvoker()
+            command = CancelFlight(booking)
+            invoker.add_command(command)
+            invoker.execute_all()
             return redirect("my_bookings")
-        except ValueError as e:
+        except Exception as e:
             return render(request, "error.html", {"error": str(e)})
 
 
@@ -133,31 +136,18 @@ def book_flight(request):
     if request.method == "POST":
         flight_id = request.POST.get("flight_id")
         flight = get_object_or_404(Flight, id=flight_id)
-
-        booking = Booking.objects.create(flight=flight, user=request.user)
-        booking.transition(PendingState())  # Set state to pending
-        return redirect("my_bookings")
-    flights = Flight.objects.all()
-    return render(request, "book_flight.html", {"flights": flights})
-
-
-@login_required
-def make_payment(request):
-    """
-    View to handle payment for a booking.
-    """
-    if request.method == "POST":
-        booking_id = request.POST.get("booking_id")
-        booking = get_object_or_404(Booking, id=booking_id, user=request.user)
-
         try:
-            if isinstance(booking.state_instance, PendingState):
-                booking.transition(ConfirmedState())  # Set state to confirmed after payment
-                return redirect("my_bookings")
-            else:
-                raise ValueError("Cannot make payment for this booking.")
-        except ValueError as e:
+            invoker = CommandInvoker()
+            command = BookFlight(flight, request.user)
+            invoker.add_command(command)
+            invoker.execute_all()
+            return redirect("my_bookings")
+        except Exception as e:
+            print(e)
             return render(request, "error.html", {"error": str(e)})
+    flights = Flight.objects.all()
+    return render(request, "home.html", {"flights": flights})
+
 
 
 @login_required
@@ -206,8 +196,14 @@ def payment_success(request):
     if payment.execute({"payer_id": payer_id}):
         booking_id = payment.transactions[0].item_list.items[0].sku
         booking = get_object_or_404(Booking, id=booking_id, user=request.user)
-        booking.confirm_booking()
-        return render(request, "payment_success.html", {"booking": booking})
+        try:
+            invoker = CommandInvoker()
+            command = ConfirmFlight(booking)
+            invoker.add_command(command)
+            invoker.execute_all()
+            return render(request, "payment_success.html", {"booking": booking})
+        except Exception as e:
+            return render(request, "error.html", {"error": str(e)})
     else:
         return render(request, "error.html", {"error": payment.error})
 

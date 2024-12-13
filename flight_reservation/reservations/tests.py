@@ -22,7 +22,7 @@ class FlightModelTest(TestCase):
     def setUp(self):
         self.flight = Flight.objects.create(
             flight_number="A123",
-            departure="City A",
+            departure="City A", 
             arrival="City B",
             seats=100,
             fare=500.0,

@@ -1,6 +1,6 @@
 from .models import Flight, Booking
 from django.core.exceptions import ObjectDoesNotExist
-
+from .state import PendingState
 class FlightRepository:
     """
     Repository class to handle database operations for Flight model.
@@ -84,7 +84,12 @@ class BookingRepository:
         :param user: User making the booking.
         :return: Created Booking object.
         """
-        return Booking.objects.create(flight=flight, user=user)
+        new_object = Booking.objects.create(flight=flight, user=user)
+        new_object.state_instance = PendingState()
+        new_object.state = PendingState.__name__
+        new_object.save()
+        
+        return new_object
 
     @staticmethod
     def get_booking_by_id(booking_id):
