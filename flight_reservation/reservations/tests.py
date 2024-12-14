@@ -1,143 +1,205 @@
 from django.test import TestCase, Client
+from django.contrib.auth import get_user_model
 from django.urls import reverse
-from .models import CustomUser, Flight, Booking
+from django.core.exceptions import ObjectDoesNotExist
+from .models import Flight, Booking
+from .state import PendingState, ConfirmedState, CancelledState
 from .repositories import FlightRepository, BookingRepository
-from .commands import BookFlight, CancelFlight, ConfirmFlight
-from .state import CancelledState, ConfirmedState, PendingState
+from .commands import BookFlight, ConfirmFlight, CancelFlight
+from .factories import FlightFactory
+import logging
 
-# ----------- MODEL TESTS -----------
-class CustomUserModelTest(TestCase):
-    def setUp(self):
-        self.user = CustomUser.objects.create_user(
-            username="testuser", password="password123", phone_number="1234567890"
-        )
+User = get_user_model()
 
-    def test_user_creation(self):
-        self.assertEqual(self.user.username, "testuser")
-        self.assertEqual(self.user.phone_number, "1234567890")
-        self.assertTrue(self.user.check_password("password123"))
-
-
-class FlightModelTest(TestCase):
-    def setUp(self):
-        self.flight = Flight.objects.create(
-            flight_number="A123",
-            departure="City A", 
-            arrival="City B",
-            seats=100,
-            fare=500.0,
-        )
-
-    def test_flight_creation(self):
-        self.assertEqual(self.flight.flight_number, "A123")
-        self.assertEqual(self.flight.departure, "City A")
-        self.assertEqual(self.flight.arrival, "City B")
-        self.assertEqual(self.flight.seats, 100)
-        self.assertEqual(self.flight.fare, 500.0)
-
-
-class BookingModelTest(TestCase):
-    def setUp(self):
-        self.user = CustomUser.objects.create_user(username="testuser", password="password123")
-        self.flight = Flight.objects.create(
-            flight_number="A123", departure="City A", arrival="City B", seats=100, fare=500.0
-        )
-        self.booking = Booking.objects.create(flight=self.flight, user=self.user, state="PendingState")
-
-    def test_booking_creation(self):
-        self.assertEqual(self.booking.flight, self.flight)
-        self.assertEqual(self.booking.user, self.user)
-        self.assertEqual(self.booking.state, "PendingState")
-
-    def test_confirm_booking(self):
-        self.booking.confirm_booking()
-        self.user.refresh_from_db()  # Reload user data from the database to get updated loyalty points
-        self.assertEqual(self.booking.state, "ConfirmedState")
-        self.assertEqual(self.user.loyalty_points, 10)  # Test loyalty points addition
-
-
-# ----------- VIEW TESTS -----------
-class ViewsTest(TestCase):
+class UserTests(TestCase):
     def setUp(self):
         self.client = Client()
-        self.user = CustomUser.objects.create_user(username="testuser", password="password123")
-        self.flight = Flight.objects.create(
-            flight_number="A123", departure="City A", arrival="City B", seats=100, fare=500.0
-        )
+        self.user = User.objects.create_user(username="testuser", password="password123")
 
-    def test_register_user(self):
-        response = self.client.post(
-            reverse("register"),
-            {
-                "username": "newuser",
-                "password": "password123",
-                "confirm_password": "password123",
-                "email": "test@example.com",
-            },
-        )
-        self.assertEqual(response.status_code, 302)  # Redirect to login
-        self.assertTrue(CustomUser.objects.filter(username="newuser").exists())
+    def test_user_registration(self):
+        response = self.client.post(reverse("register"), {
+            "username": "newuser",
+            "password": "password123",
+            "confirm_password": "password123",
+            "email": "newuser@example.com",
+        })
+        self.assertEqual(response.status_code, 302)  # Redirect after registration
+        self.assertTrue(User.objects.filter(username="newuser").exists())
 
-    def test_login_user(self):
-        response = self.client.post(reverse("login"), {"username": "testuser", "password": "password123"})
-        self.assertEqual(response.status_code, 302)  # Redirect to bookings
-        self.assertEqual(response.url, reverse("my_bookings"))
+    def test_user_login(self):
+        response = self.client.post(reverse("login"), {
+            "username": "testuser",
+            "password": "password123",
+        })
+        self.assertEqual(response.status_code, 302)  # Redirect after login
 
-# ----------- REPOSITORY TESTS -----------
-# Assume repositories perform CRUD operations on Flight and Booking models
-
-class FlightRepositoryTest(TestCase):
+class FlightTests(TestCase):
     def setUp(self):
-        self.flight = FlightRepository.create_flight(
-            flight_number="A123", departure="City A", arrival="City B", seats=100, fare=500.0
+        self.client = Client()
+        self.staff_user = User.objects.create_user(username="staff", password="password123", is_staff=True)
+        self.flight = Flight.objects.create(
+            flight_number="FL123",
+            departure="City A",
+            arrival="City B",
+            seats=100,
+            fare=200.00
         )
 
-    def test_get_all_flights(self):
-        flights = FlightRepository.get_all_flights()
-        self.assertIn(self.flight, flights)
+    def test_add_flight(self):
+        self.client.login(username="staff", password="password123")
+        response = self.client.post(reverse("add_flight"), {
+            "flight_number": "FL456",
+            "departure": "City C",
+            "arrival": "City D",
+            "seats": 50,
+            "fare": 150.00,
+        })
+        self.assertEqual(response.status_code, 302)  # Redirect after adding flight
+        self.assertTrue(Flight.objects.filter(flight_number="FL456").exists())
+
+    def test_edit_flight(self):
+        self.client.login(username="staff", password="password123")
+        response = self.client.post(reverse("edit_flight", args=[self.flight.id]), {
+            "flight_number": "FL123-UPDATED",
+            "departure": "City X",
+            "arrival": "City Y",
+            "seats": 80,
+            "fare": 250.00,
+        })
+        self.assertEqual(response.status_code, 302)  # Redirect after editing flight
+        self.flight.refresh_from_db()
+        self.assertEqual(self.flight.flight_number, "FL123-UPDATED")
+
+class BookingTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username="testuser", password="password123")
+        self.flight = Flight.objects.create(
+            flight_number="FL123",
+            departure="City A",
+            arrival="City B",
+            seats=100,
+            fare=200.00
+        )
+
+    def test_create_booking(self):
+        self.client.login(username="testuser", password="password123")
+        response = self.client.post(reverse("book_flight"), {"flight_id": self.flight.id})
+        self.assertEqual(response.status_code, 302)  # Redirect after booking
+        self.assertTrue(Booking.objects.filter(user=self.user, flight=self.flight).exists())
+
+    def test_confirm_booking(self):
+        booking = Booking.objects.create(user=self.user, flight=self.flight, state="PendingState")
+        booking.transition(ConfirmedState())
+        self.assertEqual(booking.state, "ConfirmedState")
+
+    def test_cancel_booking(self):
+        booking = Booking.objects.create(user=self.user, flight=self.flight, state="ConfirmedState")
+        booking.transition(CancelledState())
+        self.assertEqual(booking.state, "CancelledState")
+
+    def test_invalid_transition(self):
+        booking = Booking.objects.create(user=self.user, flight=self.flight, state="CancelledState")
+        with self.assertRaises(ValueError):
+            booking.transition(PendingState())
+
+class PaymentTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username="testuser", password="password123")
+        self.flight = Flight.objects.create(
+            flight_number="FL123",
+            departure="City A",
+            arrival="City B",
+            seats=100,
+            fare=200.00
+        )
+        self.booking = Booking.objects.create(user=self.user, flight=self.flight, state="PendingState")
+
+    def test_payment_success(self):
+        self.client.login(username="testuser", password="password123")
+        # Mock payment success flow
+        self.booking.transition(ConfirmedState())
+        self.assertEqual(self.booking.state, "ConfirmedState")
+
+class FactoryTests(TestCase):
+    def test_create_economy_flight(self):
+        flight = FlightFactory.create_flight("economy")
+        self.assertEqual(flight.flight_number, "E123")
+
+    def test_create_business_flight(self):
+        flight = FlightFactory.create_flight("business")
+        self.assertEqual(flight.flight_number, "B456")
+
+    def test_create_first_flight(self):
+        flight = FlightFactory.create_flight("first")
+        self.assertEqual(flight.flight_number, "F789")
+
+    def test_invalid_flight_type(self):
+        with self.assertRaises(ValueError):
+            FlightFactory.create_flight("invalid")
+
+class RepositoryTests(TestCase):
+    def setUp(self):
+        self.flight = Flight.objects.create(
+            flight_number="FL123",
+            departure="City A",
+            arrival="City B",
+            seats=100,
+            fare=200.00
+        )
 
     def test_get_flight_by_id(self):
         flight = FlightRepository.get_flight_by_id(self.flight.id)
         self.assertEqual(flight, self.flight)
 
-    def test_update_flight(self):
-        updated_flight = FlightRepository.update_flight(self.flight, seats=150)
-        self.assertEqual(updated_flight.seats, 150)
+    def test_get_all_flights(self):
+        flights = FlightRepository.get_all_flights()
+        self.assertIn(self.flight, flights)
 
-class BookingRepositoryTest(TestCase):
-    def setUp(self):
-        self.user = CustomUser.objects.create_user(username="testuser", password="password123")
-        self.flight = FlightRepository.create_flight(
-            flight_number="A123", departure="City A", arrival="City B", seats=100, fare=500.0
-        )
-        self.booking = BookingRepository.create_booking(self.flight, self.user)
-
-    def test_get_bookings_by_user(self):
-        bookings = BookingRepository.get_bookings_by_user(self.user)
-        self.assertIn(self.booking, bookings)
+    def test_create_booking(self):
+        user = User.objects.create_user(username="testuser", password="password123")
+        booking = BookingRepository.create_booking(self.flight, user)
+        self.assertTrue(Booking.objects.filter(id=booking.id).exists())
 
     def test_get_booking_by_id(self):
-        booking = BookingRepository.get_booking_by_id(self.booking.id)
-        self.assertEqual(booking, self.booking)
+        user = User.objects.create_user(username="testuser", password="password123")
+        booking = BookingRepository.create_booking(self.flight, user)
+        fetched_booking = BookingRepository.get_booking_by_id(booking.id)
+        self.assertEqual(fetched_booking, booking)
 
-# ----------- COMMAND TESTS -----------
-# Tests for command patterns for book, confirm, and cancel flights
+    def test_get_nonexistent_booking(self):
+        with self.assertRaises(ObjectDoesNotExist):
+            BookingRepository.get_booking_by_id(9999)
 
-class CommandPatternTest(TestCase):
+class CommandTests(TestCase):
     def setUp(self):
-        self.user = CustomUser.objects.create_user(username="testuser", password="password123")
+        self.user = User.objects.create_user(username="testuser", password="password123")
         self.flight = Flight.objects.create(
-            flight_number="A123", departure="City A", arrival="City B", seats=100, fare=500.0
+            flight_number="FL123",
+            departure="City A",
+            arrival="City B",
+            seats=100,
+            fare=200.00
         )
-        self.booking = Booking.objects.create(flight=self.flight, user=self.user, state="PendingState")
 
     def test_book_flight_command(self):
         command = BookFlight(self.flight, self.user)
         booking = command.execute()
-        self.assertEqual(booking.state, "PendingState")
+        self.assertTrue(Booking.objects.filter(id=booking.id).exists())
 
     def test_confirm_flight_command(self):
-        command = ConfirmFlight(self.booking)
-        command.execute()
-        self.booking.refresh_from_db()
-        self.assertEqual(self.booking.state, "ConfirmedState")
+        booking = Booking.objects.create(user=self.user, flight=self.flight, state="PendingState")
+        command = ConfirmFlight(booking)
+        result = command.execute()
+        self.assertEqual(result, f"Booking {booking.id} confirmed.")
+        booking.refresh_from_db()
+        self.assertEqual(booking.state, "ConfirmedState")
+
+    def test_cancel_flight_command(self):
+        booking = Booking.objects.create(user=self.user, flight=self.flight, state="ConfirmedState")
+        command = CancelFlight(booking)
+        result = command.execute()
+        self.assertEqual(result, f"Booking {booking.id} cancelled.")
+        booking.refresh_from_db()
+        self.assertEqual(booking.state, "CancelledState")
