@@ -1,38 +1,20 @@
 from .models import Flight, Booking
 from django.core.exceptions import ObjectDoesNotExist
 from .state import PendingState
-class FlightRepository:
-    """
-    Repository class to handle database operations for Flight model.
-    """
-
-    @staticmethod
-    def get_all_flights():
-        """
-        Fetch all flights from the database.
-        :return: QuerySet of all Flight objects.
-        """
+class FlightRepository: # flight repository class
+    @staticmethod   
+    def get_all_flights():  # get all flights from database
         return Flight.objects.all()
 
     @staticmethod
-    def get_flight_by_id(flight_id):
-        """
-        Fetch a flight by its ID.
-        :param flight_id: ID of the flight.
-        :return: Flight object if found.
-        :raises ObjectDoesNotExist: If the flight is not found.
-        """
+    def get_flight_by_id(flight_id):  # get flight by id
         try:
             return Flight.objects.get(id=flight_id)
         except ObjectDoesNotExist:
             raise ObjectDoesNotExist(f"Flight with id {flight_id} does not exist.")
 
     @staticmethod
-    def create_flight(flight_number, departure, arrival, seats, fare):
-        """
-        Create a new flight with the given details.
-        :return: Created Flight object.
-        """
+    def create_flight(flight_number, departure, arrival, seats, fare):  # create flight
         return Flight.objects.create(
             flight_number=flight_number,
             departure=departure,
@@ -42,12 +24,7 @@ class FlightRepository:
         )
 
     @staticmethod
-    def update_flight(flight, flight_number=None, departure=None, arrival=None, seats=None, fare=None):
-        """
-        Update an existing flight's details.
-        :param flight: Flight object to update.
-        :return: Updated Flight object.
-        """
+    def update_flight(flight, flight_number=None, departure=None, arrival=None, seats=None, fare=None):  # update flight
         if flight_number is not None:
             flight.flight_number = flight_number
         if departure is not None:
@@ -62,28 +39,14 @@ class FlightRepository:
         return flight
 
 
-class BookingRepository:
-    """
-    Repository class to handle database operations for Booking model.
-    """
+class BookingRepository:  # booking repository class
 
     @staticmethod
-    def get_bookings_by_user(user):
-        """
-        Fetch all bookings made by a specific user.
-        :param user: User object.
-        :return: QuerySet of Booking objects.
-        """
+    def get_bookings_by_user(user): # get bookings by user from database
         return Booking.objects.filter(user=user)
 
     @staticmethod
-    def create_booking(flight, user):
-        """
-        Create a new booking for a specific flight and user.
-        :param flight: Flight object to book.
-        :param user: User making the booking.
-        :return: Created Booking object.
-        """
+    def create_booking(flight, user):  # create booking
         new_object = Booking.objects.create(flight=flight, user=user)
         new_object.state_instance = PendingState()
         new_object.state = PendingState.__name__
@@ -92,13 +55,7 @@ class BookingRepository:
         return new_object
 
     @staticmethod
-    def get_booking_by_id(booking_id):
-        """
-        Fetch a booking by its ID.
-        :param booking_id: ID of the booking.
-        :return: Booking object if found.
-        :raises ObjectDoesNotExist: If the booking is not found.
-        """
+    def get_booking_by_id(booking_id):  # get booking by id
         try:
             return Booking.objects.get(id=booking_id)
         except ObjectDoesNotExist:

@@ -1,12 +1,12 @@
 from .models import Flight
 
-class FlightFactory:
+class FlightFactory: # factory class for creating flights
     """
     Factory class to create flights based on their type.
     """
 
     @staticmethod
-    def create_flight(flight_type):
+    def create_flight(flight_type): # method to create a flight based on the type
         """
         Create a flight object based on the given type.
 
@@ -14,7 +14,7 @@ class FlightFactory:
         :return: A Flight object
         :raises ValueError: If the flight type is invalid
         """
-        flight_data = {
+        flight_data = { # flight data based on the type
             "economy": {
                 "flight_number": "E123",
                 "departure": "New York",
@@ -38,7 +38,7 @@ class FlightFactory:
             },
         }
 
-        if flight_type not in flight_data:
-            raise ValueError(f"Invalid flight type: {flight_type}")
+        if flight_type not in flight_data:  # check if the flight type is valid
+            raise ValueError(f"Invalid flight type: {flight_type}") # raise an error if the flight type is invalid
 
-        return Flight.objects.create(**flight_data[flight_type])
+        return Flight.objects.create(**flight_data[flight_type])    # create a flight object based on the flight type

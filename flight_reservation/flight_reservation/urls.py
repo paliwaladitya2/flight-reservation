@@ -14,10 +14,10 @@ urlpatterns = [
     # Bookings Pages
     path("my-bookings/", views.my_bookings_view, name="my_bookings"),  # My Bookings page
     path("book-flight/", views.book_flight, name="book_flight"),  # Book flight page
-    path("cancel-booking/", views.cancel_booking, name="cancel_booking"), 
-    path("payment-cancel/", views.payment_cancel, name="payment_cancel"),
-    path("payment-success/", views.payment_success, name="payment_success"),
+    path("cancel-booking/", views.cancel_booking, name="cancel_booking"),   # Cancel booking page
+    path("payment-cancel/", views.payment_cancel, name="payment_cancel"),   # Payment cancel page
+    path("payment-success/", views.payment_success, name="payment_success"),    # Payment success page
 
     # App-specific URLs
-    path("reservations/", include("reservations.urls")),  # Include app routes
+    path("reservations/", include("reservations.urls")),  # Included app level routes
 ]

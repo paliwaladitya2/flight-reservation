@@ -5,7 +5,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security
 SECRET_KEY = "django-insecure-ry+c3sht4apmxpj5#_zjriu-&9-0n7vj4v(di_mq0=u#gw5sx9"
-DEBUG = True  # Set this to False in production
+DEBUG = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 # Installed Applications
@@ -16,7 +16,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "reservations",  # Your app
+    "reservations",
 ]
 
 # Middleware
@@ -96,7 +96,7 @@ LOGOUT_REDIRECT_URL = "/login/"  # Redirect after logout
 # Session Settings
 SESSION_COOKIE_SAMESITE = "Lax"  # Adjusted for template-based frontend
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SECURE = False  # Set to True in production
+SESSION_COOKIE_SECURE = False  
 
 # CSRF Settings
 CSRF_TRUSTED_ORIGINS = [
@@ -105,6 +105,6 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # PayPal Configuration
-PAYPAL_CLIENT_ID = "Abrw0xkAkLNHz9GVo5GeuAY2jjsfU4yqgU4TqT_LKQbNPgaC-xDZ2iIFy-8GjwQnDJWLtBfTfaUiIHXY"  # Replace with your actual PayPal Client ID
-PAYPAL_CLIENT_SECRET = "ENlsdipTMsZpF-Pi2y6fqEc32c3X0y1Lpz1ZJ0zNYWmA-KmaLPbgG4FjOVvowWhQ_E_EX1LKqFmh0CL6"  # Replace with your actual PayPal Client Secret
-PAYPAL_ENVIRONMENT = "sandbox"  # Use "sandbox" for testing and "live" for production
+PAYPAL_CLIENT_ID = "Abrw0xkAkLNHz9GVo5GeuAY2jjsfU4yqgU4TqT_LKQbNPgaC-xDZ2iIFy-8GjwQnDJWLtBfTfaUiIHXY"  # Client ID credentials from paypal
+PAYPAL_CLIENT_SECRET = "ENlsdipTMsZpF-Pi2y6fqEc32c3X0y1Lpz1ZJ0zNYWmA-KmaLPbgG4FjOVvowWhQ_E_EX1LKqFmh0CL6"  # Client Secret credentials from paypal
+PAYPAL_ENVIRONMENT = "sandbox"  # Environment for testing
