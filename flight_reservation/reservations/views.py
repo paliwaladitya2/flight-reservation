@@ -71,15 +71,15 @@ def logout_view(request):   # View to handle user logout
 @staff_member_required
 def add_flight(request):    # View to add a new flight
     if request.method == "POST":    # If the form is submitted
+        if(request.POST.get("flight_type")):    # Check if the flight type is provided
+            flight_type = request.POST.get("flight_type")   # Get the flight type
+            FlightFactory.create_flight(flight_type)    # Create a flight object based on the flight type using flight factory
+            return redirect("home") # Redirect to the home page
         flight_number = request.POST.get("flight_number")   # Get the flight details from the form
         departure = request.POST.get("departure")   
         arrival = request.POST.get("arrival")
         seats = request.POST.get("seats")
         fare = request.POST.get("fare")
-        if(request.POST.get("flight_type")):    # Check if the flight type is provided
-            flight_type = request.POST.get("flight_type")   # Get the flight type
-            FlightFactory.create_flight(flight_type)    # Create a flight object based on the flight type using flight factory
-            return redirect("home") # Redirect to the home page
 
         Flight.objects.create(  # Create a flight object based on the form data
             flight_number=flight_number,
